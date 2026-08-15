@@ -15,10 +15,10 @@ if ! command -v curl &>/dev/null; then
     apt-get install -y curl >/dev/null 2>&1
   fi
 fi
-source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/core.func)
-source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/tools.func)
-source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/error_handler.func)
-source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/api.func) 2>/dev/null || true
+source <(curl -fsSL https://raw.githubusercontent.com/cgonzalezbermudez/ProxmoxVE/main/misc/core.func)
+source <(curl -fsSL https://raw.githubusercontent.com/cgonzalezbermudez/ProxmoxVE/main/misc/tools.func)
+source <(curl -fsSL https://raw.githubusercontent.com/cgonzalezbermudez/ProxmoxVE/main/misc/error_handler.func)
+source <(curl -fsSL https://raw.githubusercontent.com/cgonzalezbermudez/ProxmoxVE/main/misc/api.func) 2>/dev/null || true
 declare -f init_tool_telemetry &>/dev/null && init_tool_telemetry "actual-budget-prometheus-exporter" "addon"
 
 # Enable error handling
@@ -152,7 +152,7 @@ EOF
   cat <<'UPDATEEOF' >/usr/local/bin/update_actual-budget-prometheus-exporter
 #!/usr/bin/env bash
 # actual-budget-prometheus-exporter Update Script
-type=update bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/addon/actual-budget-prometheus-exporter.sh)"
+type=update bash -c "$(curl -fsSL https://raw.githubusercontent.com/cgonzalezbermudez/ProxmoxVE/main/tools/addon/actual-budget-prometheus-exporter.sh)"
 UPDATEEOF
   chmod +x /usr/local/bin/update_actual-budget-prometheus-exporter
   msg_ok "Created update script (/usr/local/bin/update_actual-budget-prometheus-exporter)"

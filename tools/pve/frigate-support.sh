@@ -17,7 +17,7 @@ EOF
 }
 
 # Telemetry
-source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/api.func) 2>/dev/null || true
+source <(curl -fsSL https://raw.githubusercontent.com/cgonzalezbermudez/ProxmoxVE/main/misc/api.func) 2>/dev/null || true
 declare -f init_tool_telemetry &>/dev/null && init_tool_telemetry "frigate-support" "pve"
 
 header_info
@@ -94,5 +94,5 @@ EOF
 echo -e "\e[1;33m \nFinished....Reboot ${CTID} LXC to apply the changes.\n \e[0m"
 
 # In the Proxmox web shell run
-# bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/frigate-support.sh)"
+# bash -c "$(curl -fsSL https://raw.githubusercontent.com/cgonzalezbermudez/ProxmoxVE/main/tools/pve/frigate-support.sh)"
 # Reboot the LXC to apply the changes

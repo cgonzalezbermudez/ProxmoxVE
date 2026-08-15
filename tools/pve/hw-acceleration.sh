@@ -5,19 +5,19 @@
 # License: MIT
 # https://github.com/community-scripts/ProxmoxVE/raw/main/LICENSE
 # Execute within the Proxmox shell
-# bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/hw-acceleration.sh)"
+# bash -c "$(curl -fsSL https://raw.githubusercontent.com/cgonzalezbermudez/ProxmoxVE/main/tools/pve/hw-acceleration.sh)"
 
 set -e
 
 # Telemetry
-source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/api.func) 2>/dev/null || true
+source <(curl -fsSL https://raw.githubusercontent.com/cgonzalezbermudez/ProxmoxVE/main/misc/api.func) 2>/dev/null || true
 declare -f init_tool_telemetry &>/dev/null && init_tool_telemetry "hw-acceleration" "pve"
 
 # core.func: provides msg_error (used below) and lxc_cgroup_prefix (cgroup v1/v2 detection).
 # Sourced before the local header_info/msg_info/msg_ok definitions below so those
 # lightweight local versions win instead of core.func's spinner/logfile-aware ones,
 # which this standalone script never initializes.
-source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/core.func) 2>/dev/null || true
+source <(curl -fsSL https://raw.githubusercontent.com/cgonzalezbermudez/ProxmoxVE/main/misc/core.func) 2>/dev/null || true
 
 function header_info {
   clear
