@@ -57,7 +57,7 @@ _bootstrap_source() {
     _bootstrap_die "${url##*/} loaded but incomplete (missing ${probe})"
 }
 
-_FUNC_BASE="https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc"
+_FUNC_BASE="https://raw.githubusercontent.com/cgonzalezbermudez/ProxmoxVE/main/misc"
 _bootstrap_source "$_FUNC_BASE/core.func" load_functions
 _bootstrap_source "$_FUNC_BASE/error_handler.func" catch_errors
 load_functions
@@ -451,7 +451,7 @@ EOF
   post_progress_to_api
 
   local tools_content
-  tools_content=$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/tools.func) || {
+  tools_content=$(curl -fsSL https://raw.githubusercontent.com/cgonzalezbermudez/ProxmoxVE/main/misc/tools.func) || {
     msg_error "Failed to download tools.func"
     exit 115
   }
@@ -539,7 +539,7 @@ EOF
     systemctl restart "$(basename "$(dirname "$GETTY_OVERRIDE")" | sed 's/\.d//')"
     msg_ok "Customized Container"
   fi
-  echo 'set -a; [ -f /etc/profile.d/90-http-proxy.sh ] && . /etc/profile.d/90-http-proxy.sh; set +a; bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/ct/'"${app}"'.sh)"' >/usr/bin/update
+  echo 'set -a; [ -f /etc/profile.d/90-http-proxy.sh ] && . /etc/profile.d/90-http-proxy.sh; set +a; bash -c "$(curl -fsSL https://raw.githubusercontent.com/cgonzalezbermudez/ProxmoxVE/main/ct/'"${app}"'.sh)"' >/usr/bin/update
   chmod +x /usr/bin/update
 
   if [[ -n "${SSH_AUTHORIZED_KEY}" ]]; then

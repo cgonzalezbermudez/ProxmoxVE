@@ -114,7 +114,7 @@ _bootstrap_source() {
     _bootstrap_die "${url##*/} loaded but incomplete (missing ${probe})"
 }
 
-_FUNC_BASE="https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc"
+_FUNC_BASE="https://raw.githubusercontent.com/cgonzalezbermudez/ProxmoxVE/main/misc"
 _bootstrap_source "$_FUNC_BASE/api.func" post_to_api
 _bootstrap_source "$_FUNC_BASE/core.func" load_functions
 _bootstrap_source "$_FUNC_BASE/error_handler.func" catch_errors
@@ -4110,7 +4110,7 @@ check_container_os_guard() {
 # ------------------------------------------------------------------------------
 
 start() {
-  source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/tools.func)
+  source <(curl -fsSL https://raw.githubusercontent.com/cgonzalezbermudez/ProxmoxVE/main/misc/tools.func)
   if command -v pveversion >/dev/null 2>&1; then
     runtime_script_status_guard install || return 0
     install_script || return 0
@@ -4406,9 +4406,9 @@ build_container() {
   # Build PCT_OPTIONS as string for export
   local _func_url
   if [ "$var_os" == "alpine" ]; then
-    _func_url="https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/alpine-install.func"
+    _func_url="https://raw.githubusercontent.com/cgonzalezbermudez/ProxmoxVE/main/misc/alpine-install.func"
   else
-    _func_url="https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/install.func"
+    _func_url="https://raw.githubusercontent.com/cgonzalezbermudez/ProxmoxVE/main/misc/install.func"
   fi
   export FUNCTIONS_FILE_PATH="$(curl -fsSL "$_func_url")"
   if [[ -z "$FUNCTIONS_FILE_PATH" || ${#FUNCTIONS_FILE_PATH} -lt 100 ]]; then
@@ -5171,7 +5171,7 @@ EOF
     export CONTAINER_INSTALLING=true
 
     local _install_script
-    _install_script="$(curl -fsSL "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/install/${var_install}.sh")"
+    _install_script="$(curl -fsSL "https://raw.githubusercontent.com/cgonzalezbermudez/ProxmoxVE/main/install/${var_install}.sh")"
     lxc-attach -n "$CTID" -- bash -c "$_install_script"
     local lxc_exit=$?
 
@@ -5516,7 +5516,7 @@ EOF
         if [[ "${DEV_MODE_MOTD:-false}" == "true" ]]; then
           echo -e "${TAB}${HOLD}${DGN}Setting up MOTD and SSH for debugging...${CL}"
           if pct exec "$CTID" -- bash -c "
-              source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/install.func)
+              source <(curl -fsSL https://raw.githubusercontent.com/cgonzalezbermudez/ProxmoxVE/main/misc/install.func)
               declare -f motd_ssh >/dev/null 2>&1 && motd_ssh || true
             " >/dev/null 2>&1; then
             local ct_ip=$(pct exec "$CTID" ip a s dev eth0 2>/dev/null | awk '/inet / {print $2}' | cut -d/ -f1)
@@ -5595,7 +5595,7 @@ EOF
           set +Eeuo pipefail
           trap - ERR
           local _install_script
-          _install_script="$(curl -fsSL "https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/install/${var_install}.sh")"
+          _install_script="$(curl -fsSL "https://raw.githubusercontent.com/cgonzalezbermudez/ProxmoxVE/main/install/${var_install}.sh")"
           lxc-attach -n "$CTID" -- bash -c "$_install_script"
           local apt_retry_exit=$?
           set -Eeuo pipefail
@@ -7146,7 +7146,7 @@ description() {
     cat <<EOF
 <div align='center'>
   <a href='https://community-scripts.org' target='_blank' rel='noopener noreferrer'>
-    <img src='https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/images/logo-81x112.png' alt='Logo' style='width:81px;height:112px;'/>
+    <img src='https://raw.githubusercontent.com/cgonzalezbermudez/ProxmoxVE/main/misc/images/logo-81x112.png' alt='Logo' style='width:81px;height:112px;'/>
   </a>
 
   <h2 style='font-size: 24px; margin: 20px 0;'>${APP} LXC</h2>
