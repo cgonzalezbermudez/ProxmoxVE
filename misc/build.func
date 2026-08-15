@@ -964,6 +964,16 @@ resolve_os_version() {
 
   local -a versions=()
   mapfile -t versions < <(_list_os_versions "$ostype")
+  if [[ ${#versions[@]} -eq 0 ]]; then
+    # Catalog may be empty because `pveam update` has never run on this host
+    # (common on a long-unattended or freshly-installed PVE 7.4 host).
+    if command -v timeout &>/dev/null; then
+      timeout 30 pveam update &>/dev/null || true
+    else
+      pveam update &>/dev/null || true
+    fi
+    mapfile -t versions < <(_list_os_versions "$ostype")
+  fi
   [[ ${#versions[@]} -gt 0 ]] || return 0
 
   local v
@@ -4651,12 +4661,14 @@ $PCT_OPTIONS_STRING"
     fi
 
     msg_info "Configuring automatic USB passthrough (privileged container)"
+    local cg
+    cg="$(lxc_cgroup_prefix)"
     cat <<EOF >>"$LXC_CONFIG"
 # Automatic USB passthrough (privileged container)
-lxc.cgroup2.devices.allow: a
+${cg}.devices.allow: a
 lxc.cap.drop:
-lxc.cgroup2.devices.allow: c 188:* rwm
-lxc.cgroup2.devices.allow: c 189:* rwm
+${cg}.devices.allow: c 188:* rwm
+${cg}.devices.allow: c 189:* rwm
 lxc.mount.entry: /dev/serial/by-id  dev/serial/by-id  none bind,optional,create=dir
 lxc.mount.entry: /dev/ttyUSB0       dev/ttyUSB0       none bind,optional,create=file
 lxc.mount.entry: /dev/ttyUSB1       dev/ttyUSB1       none bind,optional,create=file
@@ -4664,6 +4676,42 @@ lxc.mount.entry: /dev/ttyACM0       dev/ttyACM0       none bind,optional,create=
 lxc.mount.entry: /dev/ttyACM1       dev/ttyACM1       none bind,optional,create=file
 EOF
     msg_ok "USB passthrough configured"
+  }
+
+  # Legacy GPU passthrough for hosts without PVE 8.1+ structured devN: support
+  # (PVE 7.x and PVE 8.0's pve-container ignore/reject devN: config keys).
+  # Privileged containers only -- unprivileged GPU passthrough only became
+  # possible via the devN: mechanism, so there's no equivalent legacy path.
+  configure_gpu_passthrough_legacy() {
+    local gpu_type="$1"
+    shift
+    local devices=("$@")
+
+    if [[ "$CT_TYPE" != "0" ]]; then
+      msg_warn "GPU passthrough for unprivileged containers requires PVE 8.1+ (Device Passthrough)."
+      msg_warn "This host is PVE ${PVEVERSION:-unknown}. Use a privileged container, or upgrade PVE, to enable GPU passthrough."
+      return 0
+    fi
+
+    local cg
+    cg="$(lxc_cgroup_prefix)"
+
+    local -A seen_majors=()
+    local dev major_hex major_dec
+    for dev in "${devices[@]}"; do
+      [[ -c "$dev" ]] || continue
+      major_hex="$(stat -c '%t' "$dev" 2>/dev/null)"
+      [[ -n "$major_hex" ]] || continue
+      major_dec=$((16#${major_hex}))
+      if [[ -z "${seen_majors[$major_dec]:-}" ]]; then
+        echo "${cg}.devices.allow: c ${major_dec}:* rwm" >>"$LXC_CONFIG"
+        seen_majors[$major_dec]=1
+      fi
+      echo "lxc.mount.entry: ${dev} ${dev#/} none bind,optional,create=file" >>"$LXC_CONFIG"
+    done
+
+    export GPU_TYPE="$gpu_type"
+    msg_ok "${gpu_type} GPU passthrough configured (legacy cgroup, privileged container, ${#devices[@]} devices)"
   }
 
   # Configure GPU passthrough
@@ -4740,17 +4788,21 @@ EOF
       [[ "$selected_gpu" == "INTEL" ]] && devices=("${INTEL_DEVICES[@]}")
       [[ "$selected_gpu" == "AMD" ]] && devices=("${AMD_DEVICES[@]}")
 
-      # Use pct set to add devices with proper dev0/dev1 format
-      # GIDs will be detected and set after container starts
-      local dev_index=0
-      for dev in "${devices[@]}"; do
-        # Add to config using pct set (will be visible in GUI)
-        echo "dev${dev_index}: ${dev},gid=44" >>"$LXC_CONFIG"
-        dev_index=$((dev_index + 1))
-      done
+      if gpu_devpassthrough_supported; then
+        # Use pct set to add devices with proper dev0/dev1 format
+        # GIDs will be detected and set after container starts
+        local dev_index=0
+        for dev in "${devices[@]}"; do
+          # Add to config using pct set (will be visible in GUI)
+          echo "dev${dev_index}: ${dev},gid=44" >>"$LXC_CONFIG"
+          dev_index=$((dev_index + 1))
+        done
 
-      export GPU_TYPE="$selected_gpu"
-      msg_ok "${selected_gpu} GPU passthrough configured (${#devices[@]} devices)"
+        export GPU_TYPE="$selected_gpu"
+        msg_ok "${selected_gpu} GPU passthrough configured (${#devices[@]} devices)"
+      else
+        configure_gpu_passthrough_legacy "$selected_gpu" "${devices[@]}"
+      fi
       ;;
 
     NVIDIA)
@@ -4759,15 +4811,19 @@ EOF
         return 0
       fi
 
-      # Use pct set for NVIDIA devices
-      local dev_index=0
-      for dev in "${NVIDIA_DEVICES[@]}"; do
-        echo "dev${dev_index}: ${dev},gid=44" >>"$LXC_CONFIG"
-        dev_index=$((dev_index + 1))
-      done
+      if gpu_devpassthrough_supported; then
+        # Use pct set for NVIDIA devices
+        local dev_index=0
+        for dev in "${NVIDIA_DEVICES[@]}"; do
+          echo "dev${dev_index}: ${dev},gid=44" >>"$LXC_CONFIG"
+          dev_index=$((dev_index + 1))
+        done
 
-      export GPU_TYPE="NVIDIA"
-      msg_ok "NVIDIA GPU passthrough configured (${#NVIDIA_DEVICES[@]} devices) - install drivers in container if needed"
+        export GPU_TYPE="NVIDIA"
+        msg_ok "NVIDIA GPU passthrough configured (${#NVIDIA_DEVICES[@]} devices) - install drivers in container if needed"
+      else
+        configure_gpu_passthrough_legacy "NVIDIA" "${NVIDIA_DEVICES[@]}"
+      fi
       ;;
     esac
   }
@@ -4776,8 +4832,10 @@ EOF
   configure_additional_devices() {
     # TUN device passthrough
     if [ "$ENABLE_TUN" == "yes" ]; then
+      local cg
+      cg="$(lxc_cgroup_prefix)"
       cat <<EOF >>"$LXC_CONFIG"
-lxc.cgroup2.devices.allow: c 10:200 rwm
+${cg}.devices.allow: c 10:200 rwm
 lxc.mount.entry: /dev/net/tun dev/net/tun none bind,create=file
 EOF
     fi
@@ -5828,6 +5886,12 @@ resolve_storage_preselect() {
 
 fix_gpu_gids() {
   if [[ -z "${GPU_TYPE:-}" ]]; then
+    return 0
+  fi
+
+  # Legacy (pre-8.1) GPU passthrough has no dev[0-9]+: lines to rewrite --
+  # the privileged container sees host device permissions directly.
+  if ! grep -q '^dev[0-9]\+:' "$LXC_CONFIG" 2>/dev/null; then
     return 0
   fi
 

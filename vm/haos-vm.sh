@@ -157,12 +157,17 @@ pve_check() {
   local PVE_VER
   PVE_VER="$(pveversion | awk -F'/' '{print $2}' | awk -F'-' '{print $1}')"
 
+  # Check for Proxmox VE 7.4: the final/EOL 7.x release, only minor accepted.
+  if [[ "$PVE_VER" == "7.4" ]]; then
+    return 0
+  fi
+
   # Check for Proxmox VE 8.x: allow 8.0–8.9
   if [[ "$PVE_VER" =~ ^8\.([0-9]+) ]]; then
     local MINOR="${BASH_REMATCH[1]}"
     if ((MINOR < 0 || MINOR > 9)); then
       msg_error "This version of Proxmox VE is not supported."
-      msg_error "Supported: Proxmox VE version 8.0 – 8.9"
+      msg_error "Supported: Proxmox VE version 7.4, 8.0 – 8.9"
       exit 105
     fi
     return 0
@@ -181,7 +186,7 @@ pve_check() {
 
   # All other unsupported versions
   msg_error "This version of Proxmox VE is not supported."
-  msg_error "Supported versions: Proxmox VE 8.0 – 8.x or 9.0 – 9.2"
+  msg_error "Supported versions: Proxmox VE 7.4, 8.0 – 8.9, or 9.0 – 9.2"
   exit 105
 }
 

@@ -67,9 +67,10 @@ while [[ -z "${CTID}" ]]; do
 done
 
 CTID_CONFIG_PATH="/etc/pve/lxc/${CTID}.conf"
+CG="$(lxc_cgroup_prefix)"
 
 # Skip if already configured
-grep -q "lxc.cgroup2.devices.allow: c 10:200 rwm" "$CTID_CONFIG_PATH" || echo "lxc.cgroup2.devices.allow: c 10:200 rwm" >>"$CTID_CONFIG_PATH"
+grep -q "${CG}.devices.allow: c 10:200 rwm" "$CTID_CONFIG_PATH" || echo "${CG}.devices.allow: c 10:200 rwm" >>"$CTID_CONFIG_PATH"
 grep -q "lxc.mount.entry: /dev/net/tun" "$CTID_CONFIG_PATH" || echo "lxc.mount.entry: /dev/net/tun dev/net/tun none bind,create=file" >>"$CTID_CONFIG_PATH"
 
 msg_info "Installing Tailscale in CT $CTID"

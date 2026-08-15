@@ -83,8 +83,9 @@ if [[ "$DISTRO" != "debian" && "$DISTRO" != "ubuntu" ]]; then
 fi
 
 CTID_CONFIG_PATH="/etc/pve/lxc/${CTID}.conf"
+CG="$(lxc_cgroup_prefix)"
 cat <<EOF >>"$CTID_CONFIG_PATH"
-lxc.cgroup2.devices.allow: c 10:200 rwm
+${CG}.devices.allow: c 10:200 rwm
 lxc.mount.entry: /dev/net/tun dev/net/tun none bind,create=file
 EOF
 

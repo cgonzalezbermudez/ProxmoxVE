@@ -8,6 +8,17 @@
 # bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/hw-acceleration.sh)"
 
 set -e
+
+# Telemetry
+source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/api.func) 2>/dev/null || true
+declare -f init_tool_telemetry &>/dev/null && init_tool_telemetry "hw-acceleration" "pve"
+
+# core.func: provides msg_error (used below) and lxc_cgroup_prefix (cgroup v1/v2 detection).
+# Sourced before the local header_info/msg_info/msg_ok definitions below so those
+# lightweight local versions win instead of core.func's spinner/logfile-aware ones,
+# which this standalone script never initializes.
+source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/core.func) 2>/dev/null || true
+
 function header_info {
   clear
   cat <<"EOF"
@@ -30,10 +41,6 @@ HOLD="-"
 CM="${GN}✓${CL}"
 set -e
 
-# Telemetry
-source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/api.func) 2>/dev/null || true
-declare -f init_tool_telemetry &>/dev/null && init_tool_telemetry "hw-acceleration" "pve"
-
 header_info
 echo "Loading..."
 function msg_info() {
@@ -46,9 +53,9 @@ function msg_ok() {
   echo -e "${BFR} ${CM} ${GN}${msg}${CL}"
 }
 
-if ! pveversion | grep -Eq "pve-manager/8\.[0-4](\.[0-9]+)*"; then
+if ! pveversion | grep -Eq "pve-manager/(7\.4|8\.[0-4])(\.[0-9]+)*"; then
   msg_error "This version of Proxmox Virtual Environment is not supported"
-  echo -e "Requires PVE Version 8.1 or higher"
+  echo -e "Requires PVE Version 7.4 or 8.0-8.4"
   echo -e "Exiting..."
   sleep 2
   exit
@@ -86,10 +93,11 @@ else
 fi
 header_info
 
+CG="$(declare -f lxc_cgroup_prefix &>/dev/null && lxc_cgroup_prefix || echo "lxc.cgroup2")"
 cat <<EOF >>/etc/pve/lxc/"${privileged_container}".conf
-lxc.cgroup2.devices.allow: c 226:0 rwm
-lxc.cgroup2.devices.allow: c 226:128 rwm
-lxc.cgroup2.devices.allow: c 29:0 rwm
+${CG}.devices.allow: c 226:0 rwm
+${CG}.devices.allow: c 226:128 rwm
+${CG}.devices.allow: c 29:0 rwm
 lxc.mount.entry: /dev/fb0 dev/fb0 none bind,optional,create=file
 lxc.mount.entry: /dev/dri dev/dri none bind,optional,create=dir
 lxc.mount.entry: /dev/dri/renderD128 dev/dri/renderD128 none bind,optional,create=file

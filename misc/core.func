@@ -310,6 +310,34 @@ on_pve_host() {
 }
 
 # ------------------------------------------------------------------------------
+# host_cgroup_version() / lxc_cgroup_prefix()
+#
+# - Detects whether the devices cgroup controller is on the legacy/hybrid v1
+#   hierarchy (possible on PVE 7.x, or an 8+ host pinned to legacy mode) or
+#   the unified v2 hierarchy (PVE 8+ default)
+# - lxc.cgroup2.devices.allow directives are inert outside unified v2;
+#   lxc.cgroup.devices.allow is the v1 equivalent
+# ------------------------------------------------------------------------------
+host_cgroup_version() {
+  [[ -d /sys/fs/cgroup/devices ]] && echo "1" || echo "2"
+}
+
+lxc_cgroup_prefix() {
+  [[ "$(host_cgroup_version)" == "1" ]] && echo "lxc.cgroup" || echo "lxc.cgroup2"
+}
+
+# ------------------------------------------------------------------------------
+# gpu_devpassthrough_supported()
+#
+# - Structured devN: LXC config (Container Device Passthrough GUI) shipped
+#   with pve-container in the PVE 8.1 line. PVE 7.x and PVE 8.0 silently
+#   ignore or reject it.
+# ------------------------------------------------------------------------------
+gpu_devpassthrough_supported() {
+  dpkg --compare-versions "${PVEVERSION:-0}" ge "8.1"
+}
+
+# ------------------------------------------------------------------------------
 # require_pve_host()
 #
 # - Guard for tools that drive the node itself (pct/pveam/pvesm/pvesh/qm)
@@ -369,7 +397,7 @@ require_debian_like() {
 # pve_check()
 #
 # - Validates Proxmox VE version compatibility
-# - Supported: PVE 8.0-8.9 and PVE 9.0-9.2
+# - Supported: PVE 7.4 (EOL, limited feature support), PVE 8.0-8.9, PVE 9.0-9.2
 # - Exits with error message if unsupported version detected
 # ------------------------------------------------------------------------------
 pve_check() {
@@ -380,12 +408,19 @@ pve_check() {
   fi
   PVE_VER="$(pveversion | awk -F'/' '{print $2}' | awk -F'-' '{print $1}')"
 
+  # Check for Proxmox VE 7.4: the final/EOL 7.x release, only minor accepted.
+  # Patch-level (7.4-13..7.4-18, the old pre-8.1 gate's range) can no longer be
+  # distinguished here since PVE_VER strips the build suffix.
+  if [[ "$PVE_VER" == "7.4" ]]; then
+    return 0
+  fi
+
   # Check for Proxmox VE 8.x: allow 8.0–8.9
   if [[ "$PVE_VER" =~ ^8\.([0-9]+) ]]; then
     local MINOR="${BASH_REMATCH[1]}"
     if ((MINOR < 0 || MINOR > 9)); then
       msg_error "This version of Proxmox VE is not supported."
-      msg_error "Supported: Proxmox VE version 8.0 – 8.9"
+      msg_error "Supported: Proxmox VE version 7.4, 8.0 – 8.9"
       exit 105
     fi
     return 0
@@ -404,7 +439,7 @@ pve_check() {
 
   # All other unsupported versions
   msg_error "This version of Proxmox VE is not supported."
-  msg_error "Supported versions: Proxmox VE 8.0 – 8.9 or 9.0 – 9.2"
+  msg_error "Supported versions: Proxmox VE 7.4, 8.0 – 8.9, or 9.0 – 9.2"
   exit 105
 }
 
